@@ -7,14 +7,16 @@ import java.util.List;
 
 @Entity
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class Trip {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String destination;
     private LocalDate startDate;
     private LocalDate endDate;
+
+    public Trip() {
+    }
 
     @ManyToOne
     private User user;
@@ -65,8 +67,5 @@ public class Trip {
         this.startDate = startDate;
         this.endDate = endDate;
         this.user = user;
-    }
-
-    public Trip() {
     }
 }

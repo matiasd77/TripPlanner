@@ -2,6 +2,7 @@ package PlanifikuesInteraktiviUdhetimeve.Service;
 
 import PlanifikuesInteraktiviUdhetimeve.DTO.UserDTO;
 import PlanifikuesInteraktiviUdhetimeve.Entity.User;
+import PlanifikuesInteraktiviUdhetimeve.Entity.Role;
 import PlanifikuesInteraktiviUdhetimeve.Mapper.UserMapper;
 import PlanifikuesInteraktiviUdhetimeve.Repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -9,15 +10,13 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Service
 public class UserService {
 
-    private final UserRepository userRepo;
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepo) {
-        this.userRepo = userRepo;
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     public UserDTO createUser(UserDTO userDTO) {
@@ -25,38 +24,42 @@ public class UserService {
             throw new IllegalArgumentException("Password must not be null or empty");
         }
         User user = UserMapper.toEntity(userDTO);
-        return UserMapper.toDTO(userRepo.save(user));
+        return UserMapper.toDTO(userRepository.save(user));
     }
+
     public UserDTO updateUser(Long id, UserDTO userDTO) {
-        User existingUser = userRepo.findById(id)
+        User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
-        // Update fields
         existingUser.setName(userDTO.getName());
         existingUser.setEmail(userDTO.getEmail());
-        existingUser.setRole(userDTO.getRole());
-        existingUser.setPassword(userDTO.getPassword());  // Assuming password is allowed to be updated
+        existingUser.setPassword(userDTO.getPassword());
+        
+        // Handle role update safely
+        try {
+            Role role = Role.valueOf(userDTO.getRole().toUpperCase());
+            existingUser.setRole(role);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid role: " + userDTO.getRole());
+        }
 
-        // Save updated user
-        User updatedUser = userRepo.save(existingUser);
-
+        User updatedUser = userRepository.save(existingUser);
         return UserMapper.toDTO(updatedUser);
     }
 
-
     public UserDTO getUserById(Long id) {
-        return userRepo.findById(id)
+        return userRepository.findById(id)
                 .map(UserMapper::toDTO)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
     public List<UserDTO> getAllUsers() {
-        return userRepo.findAll().stream()
+        return userRepository.findAll().stream()
                 .map(UserMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
     public void deleteUser(Long id) {
-        userRepo.deleteById(id);
+        userRepository.deleteById(id);
     }
 }
