@@ -3,6 +3,7 @@ package PlanifikuesInteraktiviUdhetimeve.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,6 +21,26 @@ public class Trip {
 
     @ManyToOne
     private User user;
+
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WeatherAlert> weatherAlerts = new ArrayList<>();
+
+    // Helper methods for weather alerts
+    public void addWeatherAlert(WeatherAlert alert) {
+        weatherAlerts.add(alert);
+        alert.setTrip(this);
+    }
+
+    public void removeWeatherAlert(WeatherAlert alert) {
+        weatherAlerts.remove(alert);
+        alert.setTrip(null);
+    }
+
+    public List<WeatherAlert> getActiveWeatherAlerts() {
+        return weatherAlerts.stream()
+                .filter(WeatherAlert::isActive)
+                .toList();
+    }
 
     public Long getId() {
         return id;

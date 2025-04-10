@@ -1,14 +1,13 @@
 package PlanifikuesInteraktiviUdhetimeve.Controller;
 
-import PlanifikuesInteraktiviUdhetimeve.DTO.AuthRequestDTO;
-import PlanifikuesInteraktiviUdhetimeve.DTO.AuthResponseDTO;
 import PlanifikuesInteraktiviUdhetimeve.DTO.UserDTO;
 import PlanifikuesInteraktiviUdhetimeve.Entity.Role;
 import PlanifikuesInteraktiviUdhetimeve.Entity.User;
 import PlanifikuesInteraktiviUdhetimeve.Repository.UserRepository;
-import PlanifikuesInteraktiviUdhetimeve.Security.JwtUtil;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,33 +19,36 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager;
-
     public AuthController(UserRepository userRepository,
-                          PasswordEncoder passwordEncoder,
-                          JwtUtil jwtUtil,
-                          AuthenticationManager authenticationManager) {
+                          PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
-        this.authenticationManager = authenticationManager;
     }
 
     @PostConstruct
     public void init() {
         // Create default admin if it doesn't exist
         if (userRepository.findByEmail("admin@admin.com").isEmpty()) {
+            log.debug("Creating default admin user");
             User admin = new User();
             admin.setEmail("admin@admin.com");
             admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setName("Admin");
             admin.setRole(Role.ADMIN);
             userRepository.save(admin);
+            log.info("Default admin user created successfully");
+        } else {
+            log.debug("Admin user already exists");
+            // Update admin password if needed
+            User admin = userRepository.findByEmail("admin@admin.com").get();
+            admin.setPassword(passwordEncoder.encode("admin123"));
+            userRepository.save(admin);
+            log.info("Admin password updated successfully");
         }
     }
 
@@ -61,30 +63,8 @@ public class AuthController {
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         user.setName(userDTO.getName());
         user.setRole(Role.USER); // Default role for new registrations
-        User savedUser = userRepository.save(user);
-
-        String token = jwtUtil.generateToken(savedUser);
-        return ResponseEntity.ok(new AuthResponseDTO.Builder()
-                .token(token)
-                .email(savedUser.getEmail())
-                .role(savedUser.getRole().name())
-                .build());
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequestDTO request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        String token = jwtUtil.generateToken(user);
-        return ResponseEntity.ok(new AuthResponseDTO.Builder()
-                .token(token)
-                .email(user.getEmail())
-                .role(user.getRole().name())
-                .build());
+        userRepository.save(user);
+        
+        return ResponseEntity.ok().body("User registered successfully");
     }
 }
