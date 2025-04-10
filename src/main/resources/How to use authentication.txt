@@ -1,8 +1,0 @@
-Send a POST request to /api/auth/login with:
-
-{
-    "email": "admin@admin.com",
-    "password": "admin123"
-}
-
-You'll receive a JWT token in response that you can use to access admin-protected endpoints by including it in the Authorization header like: Authorization: Bearer your-jwt-token
